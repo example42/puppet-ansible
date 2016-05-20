@@ -2,6 +2,8 @@ class ansible::profile::master (
 
   Variant[Boolean,String] $ensure          = present,
 
+  Variant[Undef,String]   $inventory_epp   = undef,
+
 ) {
 
   include ::ansible
@@ -14,10 +16,7 @@ class ansible::profile::master (
       type   => 'rsa',
       tag    => "ansible_master_${::ansible::master}"
     }
+    Sshkey <<| tag == "ansible_node_${::ansible::master}_rsa" |>>
   }
-
-  # Collect ssh host keys from nodes
-  Sshkey <<| tag == "ansible_node_${::ansible::master}_rsa" |>>
-
 
 }

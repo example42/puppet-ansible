@@ -1,11 +1,12 @@
 class ansible::user (
   Variant[Boolean,String] $ensure           = present,
   String                  $password         = '',
-  Boolean                 $sudo             = true,
+  Boolean                 $configure_sudo   = true,
+  Boolean                 $run_ssh_keygen   = false,
 ) {
 
   user { 'ansible':
-    ensure     => present,
+    ensure     => $ensure,
     comment    => 'ansible',
     managehome => true,
     shell      => '/bin/bash',
@@ -13,23 +14,27 @@ class ansible::user (
     password   => $password,
   }
 
+  $dir_ensure = ::tp::ensure2dir($ensure)
+
   file { '/home/ansible/.ssh' :
-    ensure  => directory,
+    ensure  => $dir_ensure,
     mode    => '0700',
     owner   => 'ansible',
     group   => 'ansible',
     require => User[ansible],
-    notify  => Exec[home_ansible_ssh_keygen]
   }
 
-  exec { 'home_ansible_ssh_keygen':
-    path    => ['/usr/bin'],
-    command => 'ssh-keygen -t rsa -q -f /home/ansible/.ssh/id_rsa -N ""',
-    creates => '/home/ansible/.ssh/id_rsa',
-    user    => 'ansible',
+  if $run_ssh_keygen {
+    exec { 'home_ansible_ssh_keygen':
+      path    => ['/usr/bin'],
+      command => 'ssh-keygen -t rsa -q -f /home/ansible/.ssh/id_rsa -N ""',
+      creates => '/home/ansible/.ssh/id_rsa',
+      user    => 'ansible',
+      require => File['/home/ansible/.ssh'],
+    }
   }
 
-  if $sudo {
+  if $configure_sudo {
     file { '/etc/sudoers.d/ansible' :
       ensure  => file,
       mode    => '0440',
